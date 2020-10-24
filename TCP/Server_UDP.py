@@ -12,7 +12,7 @@ print("2 - A7X (250MB)")
 f_num = int(input("Seleccione el archivo:"))
 if f_num == 1:
     fileName = "../media/roses.pdf"
-    fileExt = ".mp4"
+    fileExt = ".pdf"
 elif f_num == 2:
     fileName = "../media/a7x.mp4"
     fileExt = ".mp4"
