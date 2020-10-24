@@ -4,7 +4,7 @@ import threading
 import time
 import cv2
 
-host = ""
+host = "127.0.0.1"
 port = 65432
 max_bytes = 1024
 last_port = 65525

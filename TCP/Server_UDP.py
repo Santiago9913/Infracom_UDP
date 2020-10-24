@@ -1,28 +1,26 @@
 import socket
 import threading
 import time
-import datetime
-import os
 import hashlib
 
 lock = threading.Lock()
 
 fileName = ""
 fileExt = ""
+print("1 - ROSES (100MB)")
+print("2 - A7X (250MB)")
 f_num = int(input("Seleccione el archivo:"))
-print("     1 - ROSES (100MB)")
-print("     2 - A7X (250MB)")
 if f_num == 1:
-    fileName = "" #TODO
+    fileName = "../media/roses.pdf" #TODO
     fileExt = ".mp4"
 elif f_num == 2:
-    fileName = "" #TODO
+    fileName = "../media/a7x.mp4" #TODO
     fileExt = ".mp4"
 n_clients = int(input("Introduzca el # de clientes a enviar el archivo"))
 c_clients = 0
 attend = False
 
-host = ""
+host = "127.0.0.1"
 buffer = 1024
 
 def server(p, dir):
@@ -36,10 +34,10 @@ def server(p, dir):
 
     while 1:
         data = s.recvfrom(buffer)
-        mess = data[0]
+        msg = data[0]
         dir = data[1]
 
-        if (mess.decode() == "READY"):
+        if (msg.decode() == "READY"):
             c_clients += 1
             print("Clientes conectados:", c_clients)
             sha1 = hashlib.sha1()
