@@ -11,10 +11,10 @@ print("1 - ROSES (100MB)")
 print("2 - A7X (250MB)")
 f_num = int(input("Seleccione el archivo:"))
 if f_num == 1:
-    fileName = "../media/roses.pdf" #TODO
+    fileName = "../media/roses.pdf"
     fileExt = ".mp4"
 elif f_num == 2:
-    fileName = "../media/a7x.mp4" #TODO
+    fileName = "../media/a7x.mp4"
     fileExt = ".mp4"
 n_clients = int(input("Introduzca el # de clientes a enviar el archivo"))
 c_clients = 0

@@ -11,7 +11,7 @@ lock = threading.Lock()
 def cliente(num, last, lock):
     datosLog = ''
     mensajeConsola = []
-    mensajeConsola.append("Cliente: ",num)
+    mensajeConsola.append("Cliente: "+str(num))
 
     so = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
     so.settimeout(10)
@@ -39,7 +39,7 @@ def cliente(num, last, lock):
 
     hashR = ''
     sha1 = hashlib.sha1()
-    fileName = 'Recibido/received_file' + str(num) + fTipo
+    fileName = 'Recibido/copia' + str(num) + fTipo
 
     f = open(fileName, 'wb')
     mensajeConsola.append('Recibiendo archivo')
@@ -105,39 +105,39 @@ def cliente(num, last, lock):
         print(i)
 
 
-def createLog():
-    print("Creando log")
-
-    # Fecha y hora --creacion log
-    fecha = datetime.datetime.now()
-
-    logName = "LogsCliente/UDPlogC" + str(fecha.timestamp()) + ".txt"
-    logFile = open(logName, "a")
-    logFile.write("Fecha: " + str(fecha) + "\n")
-
-    logFile.write("----------------------------------------\n")
-
-    logFile.close()
-    return logName
+# def createLog():
+#     print("Creando log")
+#
+#     # Fecha y hora --creacion log
+#     fecha = datetime.datetime.now()
+#
+#     logName = "LogsCliente/UDPlogC" + str(fecha.timestamp()) + ".txt"
+#     logFile = open(logName, "a")
+#     logFile.write("Fecha: " + str(fecha) + "\n")
+#
+#     logFile.write("----------------------------------------\n")
+#
+#     logFile.close()
+#     return logName
 
 cantidadClientes = 25
 lock = threading.Lock()
-file = createLog()
+# file = createLog()
 
-def logDatosCliente(recepcion, numPaqRecv, hashR, hash, fileName):
-    with lock:
-        fileN = fileName.split('/')
-        fileN = 'Nombre del archivo: ' + file[1] + '\n'
-        fSize = os.path.getsize(fileName)
-        size = 'Tamanio del archivo: ' + str(fSize) + ' bytes\n'
-
-        paquetesR = "Numero de paquetes recibidos por el cliente:" + str(numPaqRecv) + "\n"
-        separador = "\n---------------------------------------\n"
-        hash = "\nHASH calculado en el cliente: \n" + hash
-        hashR = "\nHASH calculado en el servidor: \n" + hashR
-        logFile = open(file, "a")
-        logFile.write(fileN + size + recepcion + "\n" + paquetesR + hashR + hash + separador)
-        logFile.close()
+# def logDatosCliente(recepcion, numPaqRecv, hashR, hash, fileName):
+#     with lock:
+#         fileN = fileName.split('/')
+#         fileN = 'Nombre del archivo: ' + file[1] + '\n'
+#         fSize = os.path.getsize(fileName)
+#         size = 'Tamanio del archivo: ' + str(fSize) + ' bytes\n'
+#
+#         paquetesR = "Numero de paquetes recibidos por el cliente:" + str(numPaqRecv) + "\n"
+#         separador = "\n---------------------------------------\n"
+#         hash = "\nHASH calculado en el cliente: \n" + hash
+#         hashR = "\nHASH calculado en el servidor: \n" + hashR
+#         logFile = open(file, "a")
+#         logFile.write(fileN + size + recepcion + "\n" + paquetesR + hashR + hash + separador)
+#         logFile.close()
 
 for i in range(cantidadClientes):
     if(i == cantidadClientes -1):
