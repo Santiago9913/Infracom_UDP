@@ -6,23 +6,22 @@ import cv2
 
 IP_HOST = '127.0.0.1'
 PUERTO = 65432
-CANT_MAX_BYTES = 8196
 ULTIMO_PUERTO = 65525
 PRIMER_PUERTO = 49152
+MAX_BYTES = 8196
 
-ultima_ipmulticast = '224.3.0.0'
-ultimo_puertomulticast = 49152
-RUTA_VIDEO = '../Streaming_Media/'
+latest_mc_ip = '224.3.0.0'
+latest_mc_port = 49152
+ROUTE = '../Streaming_Media/'
 formato_nombre_archivo = 'video${}.mp4'
-nombre_archivo_actual = 0
+archivo_actual = 0
 
-
-def nuevo_grupo_mc():
-    global ultima_ipmulticast, ultimo_puertomulticast
-    if ultimo_puertomulticast < ULTIMO_PUERTO:
-        ultimo_puertomulticast += 1
-        return (ultima_ipmulticast, ultimo_puertomulticast)
-    numeros = [int(i) for i in ultima_ipmulticast.split('.')]
+def new_mc_group():
+    global latest_mc_ip, latest_mc_port
+    if latest_mc_port < ULTIMO_PUERTO:
+        latest_mc_port += 1
+        return (latest_mc_ip, latest_mc_port)
+    numeros = [int(i) for i in latest_mc_ip.split('.')]
     if numeros[-1] < 255:
         numeros[-1] += 1
     elif numeros[-2] < 255:
@@ -34,12 +33,11 @@ def nuevo_grupo_mc():
         numeros[-1] = 0
     else:
         raise Exception('Se excedieron las IPs')
-    ultima_ipmulticast, ultimo_puertomulticast = ('.'.join([str(i) for i in numeros]), PRIMER_PUERTO)
-    print("Multicast: IP " + str(ultima_ipmulticast) + " PUERTO: " + str(ultimo_puertomulticast))
-    return (ultima_ipmulticast, ultimo_puertomulticast)
+    latest_mc_ip, latest_mc_port = ('.'.join([str(i) for i in numeros]), PRIMER_PUERTO)
+    print("Multicast: IP " + str(latest_mc_ip) + " PUERTO: " + str(latest_mc_port))
+    return (latest_mc_ip, latest_mc_port)
 
-
-def iniciar_conexion(path, multicast_group):
+def begin(path, multicast_group):
     soc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     ttl = struct.pack('b', 1)
     soc.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
@@ -59,24 +57,22 @@ def stream(sock, multicast_group, filename):
             sock.sendto(jpeg.tobytes(), multicast_group)
             time.sleep(0.05)
 
-
-def ejecucion(conn, addr):
-    global formato_nombre_archivo, nombre_archivo_actual
-    data = conn.recv(CANT_MAX_BYTES)
-    path = RUTA_VIDEO + formato_nombre_archivo.replace('${}', str(nombre_archivo_actual))
+def run(conn, addr):
+    global formato_nombre_archivo, archivo_actual
+    data = conn.recv(MAX_BYTES)
+    path = ROUTE + formato_nombre_archivo.replace('${}', str(archivo_actual))
     print(str(path))
-    nombre_archivo_actual += 1
+    archivo_actual += 1
     a = open(path, 'wb')
     while data:
         a.write(data)
-        data = conn.recv(CANT_MAX_BYTES)
+        data = conn.recv(MAX_BYTES)
     conn.close()
-    iniciar_conexion(path, nuevo_grupo_mc())
-
+    begin(path, new_mc_group())
 
 tcp_soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 tcp_soc.bind((IP_HOST, PUERTO))
 tcp_soc.listen()
 while True:
     conn, addr = tcp_soc.accept()
-    threading.Thread(target=ejecucion, args=(conn, addr)).start()
+    threading.Thread(target=run, args=(conn, addr)).start()

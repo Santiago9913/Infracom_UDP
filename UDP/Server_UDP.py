@@ -23,13 +23,12 @@ def pedirDatos():
     return fileName, fileT, numClientes
 
 
-tup = pedirDatos()
-fileName = tup[0]
-numClientes = tup[2]
-fileT = tup[1]
-numClientesC = 0
-atender = False
-
+file_data = pedirDatos()
+fileName = file_data[0]
+n_clientes = file_data[2]
+fileT = file_data[1]
+c_clientes = 0
+attend = False
 
 def createLog():
     print("Creando log")
@@ -73,14 +72,12 @@ def logDatosCliente(recepcion, tiempo, numPaqEnv, numPaqRecv, hashR, hash):
 
 
 host = ""
-BUFF = 4096
+BUFFER = 4096
 
 def servidor(port1,dir):
-    global numClientesC
-    global atender
+    global c_clientes
+    global attend
     port=20001+port1
-    # TCP ------> socket.AF_INET, socket.SOCK_STREAM
-    # UDP ------> socket.AF_INET, socket.SOCK_DGRAM
     s = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
     # Bind to address and ip
@@ -89,21 +86,21 @@ def servidor(port1,dir):
     print("UDP server up and listening at port ",port)
 
     while True:
-        data = s.recvfrom(BUFF)
-        mess = data[0]
+        data = s.recvfrom(BUFFER)
+        msg = data[0]
         dir = data[1]
 
-        print('Server received', mess.decode())
+        print('Server received', msg.decode())
 
-        if (mess.decode() == "READY"):
-            numClientesC += 1
-            print("Numero Clientes Conectados: ", numClientesC)
+        if (msg.decode() == "READY"):
+            c_clientes += 1
+            print("Numero Clientes Conectados: ", c_clientes)
             sha1 = hashlib.sha1()
             while True:
-                if (numClientesC >= numClientes or atender):
+                if (c_clientes >= n_clientes or attend):
                     print("Starting to send")
                     break
-            atender = True
+            attend = True
             i = 0
 
             s.sendto(fileT.encode(), dir)
@@ -114,7 +111,7 @@ def servidor(port1,dir):
             f = open(fileName, 'rb')
             while True:
                 i += 1
-                data = f.read(BUFF)
+                data = f.read(BUFFER)
                 if not data:
                     break
                 sha1.update(data)
@@ -127,7 +124,7 @@ def servidor(port1,dir):
             f.close()
 
 
-            data = s.recvfrom(BUFF)
+            data = s.recvfrom(BUFFER)
             # Notificacion de recepcion
             datosCiente = data[0].decode().split("/")
             recepcion = datosCiente[1]
@@ -145,8 +142,8 @@ def servidor(port1,dir):
             logDatosCliente(recepcion, totalT, i, paqRecv, hashR, has)
 
             print('Fin envio')
-            numClientesC -= 1
-            print("Numero Clientes Conectados: ", numClientesC)
+            c_clientes -= 1
+            print("Numero Clientes Conectados: ", c_clientes)
 
             # Notificacion de fin de cliente o no
             terminS = datosCiente[3]
@@ -169,17 +166,17 @@ s = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 s.bind((host, port1))
 i=1
 while True:
-    data = s.recvfrom(BUFF)
-    mess = data[0]
+    data = s.recvfrom(BUFFER)
+    msg = data[0]
     dir = data[1]
 
-    if (mess.decode() == "REQUEST"):
+    if (msg.decode() == "REQUEST"):
         if(i==26):
             i=1
         t = threading.Thread(target=servidor, args=(i,dir))
         i += 1
         t.start()
 
-    if (mess.decode() == "END"):
+    if (msg.decode() == "END"):
         print("FIN CONEXIONES")
         break

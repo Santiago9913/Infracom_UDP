@@ -5,39 +5,33 @@ import threading
 import hashlib
 import time
 
-BUFF = 4096
+BUFFER = 4096
 lock = threading.Lock()
-
 
 def cliente(num, last, lock):
     datosLog = ""
-    mensajesConsola = []
-    mensajesConsola.append("Cliente #" + str(num))
+    console_msgs = []
+    console_msgs.append("Cliente #" + str(num))
 
-    # TCP ------> socket.AF_INET, socket.SOCK_STREAM
-    # UDP ------> socket.AF_INET, socket.SOCK_DGRAM
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.settimeout(10)
     host = "127.0.0.1"
-    HostPort = (host, 20001)
+    host_port = (host, 20001)
     i = 0
 
-    # Pedir puerto por donde se va a comunicar con el thread del servidor que le es asignado
-    s.sendto("REQUEST".encode(), HostPort)
-    data = s.recvfrom(BUFF)
-    HostPort = (data[1])
-    # print("HOSTPORT--->   ",HostPort)
-    s.sendto("READY".encode(), HostPort)
+    s.sendto("REQUEST".encode(), host_port)
+    data = s.recvfrom(BUFFER)
+    host_port = (data[1])
+    s.sendto("READY".encode(), host_port)
 
-    mensajesConsola.append("Listo para recibir")
+    console_msgs.append("Listo para recibir")
     print("Listo para recibir")
     fTipo = ""
     while True:
-        data = s.recvfrom(BUFF)
+        data = s.recvfrom(BUFFER)
         if (data[0].__contains__(b".")):
             fTipo = data[0].decode()
             break
-    # print("TIPO:",fTipo)
     finT = 0
 
     timeout=True
@@ -46,13 +40,13 @@ def cliente(num, last, lock):
     sha1 = hashlib.sha1()
     fileName = "../Recibido/copia" + str(num) + fTipo
     f = open(fileName, 'wb')
-    mensajesConsola.append("Recibiendo archivo")
+    console_msgs.append("Recibiendo archivo")
     print("Recibiendo archivo", num)
     while True:
         # print('receiving data...',i)
         i += 1
         try:
-            data = s.recvfrom(BUFF)
+            data = s.recvfrom(BUFFER)
         except:
             finT = time.time()
             hashR = "TIMEOUT"
@@ -73,26 +67,26 @@ def cliente(num, last, lock):
             sha1.update(data[0])
             f.write(data[0])
     f.close()
-    mensajesConsola.append("Archivo recibido")
+    console_msgs.append("Archivo recibido")
     print("ARCHIVO RECIVIDO", num)
     # Numero de paquetes recibidos
     datosLog += str(i) + "/"
 
     if timeout:
         hashR = hashR[4:].decode()
-    mensajesConsola.append("Cliente" + str(num) + "Hash Recibido: \n" + str(hashR))
-    mensajesConsola.append("Cliente" + str(num) + "Hash Calculado:\n" + str(sha1.hexdigest()))
+    console_msgs.append("Cliente" + str(num) + "Hash Recibido: \n" + str(hashR))
+    console_msgs.append("Cliente" + str(num) + "Hash Calculado:\n" + str(sha1.hexdigest()))
     print("HASH RECIBIDO", num)
     notif = ""
     if (hashR == sha1.hexdigest()):
         notif = "Exito"
-        mensajesConsola.append("Archivo recibido Exitosamente")
+        console_msgs.append("Archivo recibido Exitosamente")
     else:
         notif = "Error"
-        mensajesConsola.append("El Hash del archivo recibido es diferente del calculado")
+        console_msgs.append("El Hash del archivo recibido es diferente del calculado")
     print("NOTIF")
     # Notificacion de recepcion
-    mensajesConsola.append("Envio de notificacion")
+    console_msgs.append("Envio de notificacion")
     recepcion = "Cliente " + str(num) + " termino con estado de " + notif
     datosLog += recepcion + "/"
 
@@ -105,15 +99,13 @@ def cliente(num, last, lock):
     datosLog += "Hash calculado por el cliente: \n" + str(hashR)
 
     # print(datosLog)
-    s.sendto(datosLog.encode(), HostPort)
+    s.sendto(datosLog.encode(), host_port)
     print("ENVIO DATOS")
 
     logDatosCliente(recepcion, i, hashR, sha1.hexdigest(), fileName)
 
-    for i in mensajesConsola:
+    for i in console_msgs:
         print(i)
-
-    # s.close()
 
 
 def createLog():
@@ -131,11 +123,9 @@ def createLog():
     logFile.close()
     return logName
 
-
-cantidadCliente = 1
+n_clients = 1
 lock = threading.Lock()
 file = createLog()
-
 
 def logDatosCliente(recepcion, numPaqRecv, hashR, hash, fileName):
     with lock:
@@ -154,12 +144,10 @@ def logDatosCliente(recepcion, numPaqRecv, hashR, hash, fileName):
         logFile.close()
 
 
-for i in range(cantidadCliente):
-    if (i == cantidadCliente - 1):
+for i in range(n_clients):
+    if (i == n_clients - 1):
         t = threading.Thread(target=cliente, args=(i, True, lock))
         t.start()
     else:
         t = threading.Thread(target=cliente, args=(i, False, lock))
         t.start()
-
-# print("FIN")

@@ -12,7 +12,7 @@ if len(sys.argv) != 3:
     print("datos necesarios" + sys.argv[0], "<grupo_mc> <puerto>")
     sys.exit(1)
 
-grupo_mc = sys.argv[1]
+mc_group = sys.argv[1]
 server_address = ('', int(sys.argv[2]))
 header = False
 
@@ -20,7 +20,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 sock.bind(server_address)
 
-grupo = socket.inet_aton(grupo_mc)
+grupo = socket.inet_aton(mc_group)
 mreq = struct.pack('4sl', grupo, socket.INADDR_ANY)
 sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,mreq)
 
