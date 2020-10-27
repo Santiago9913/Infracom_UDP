@@ -4,44 +4,51 @@ import threading
 import time
 import cv2
 
-host = "127.0.0.1"
-port = 65432
-max_bytes = 1024
-last_port = 65525
-first_port = 49152
+IP_HOST = '127.0.0.1'
+PUERTO = 65432
+CANT_MAX_BYTES = 8196
+ULTIMO_PUERTO = 65525
+PRIMER_PUERTO = 49152
 
-last_multicast_ip = "224.3.0.0"
-last_multicast_port = 49152
-source = ""
-file_format = 'video${}.mp4'
-c_file = ""
+ultima_ipmulticast = '224.3.0.0'
+ultimo_puertomulticast = 49152
+RUTA_VIDEO = '../Streaming_Media/'
+formato_nombre_archivo = 'video${}.mp4'
+nombre_archivo_actual = 0
 
-def new_group():
-    global last_multicast_ip
-    global last_multicast_port
-    if last_multicast_port < last_port:
-        last_multicast_port += 1
-        return (last_multicast_ip, last_multicast_port)
-    nums = [int(i) for i in last_multicast_ip.split(".")]
-    if nums[-1] < 255:
-        nums[-1] += 1
-    elif nums[-2] < 255:
-        nums[-2] += 1
-        nums[-1] = 0
-    elif nums[-3] < 4:
-        nums[-3] += 1
-        nums[-2] = 0
-        nums[-1] = 0
+
+def nuevo_grupo_mc():
+    global ultima_ipmulticast, ultimo_puertomulticast
+    if ultimo_puertomulticast < ULTIMO_PUERTO:
+        ultimo_puertomulticast += 1
+        return (ultima_ipmulticast, ultimo_puertomulticast)
+    numeros = [int(i) for i in ultima_ipmulticast.split('.')]
+    if numeros[-1] < 255:
+        numeros[-1] += 1
+    elif numeros[-2] < 255:
+        numeros[-2] += 1
+        numeros[-1] = 0
+    elif numeros[-3] < 4:
+        numeros[-3] += 1
+        numeros[-2] = 0
+        numeros[-1] = 0
     else:
-        raise Exception("IPs excedidas")
-    last_multicast_ip, last_multicast_port = ('.'.join([str(i) for i in nums]), first_port)
-    print("IP:", str(last_multicast_ip))
-    print("Puerto:", str(last_multicast_port))
-    return (last_multicast_ip, last_multicast_port)
+        raise Exception('Se excedieron las IPs')
+    ultima_ipmulticast, ultimo_puertomulticast = ('.'.join([str(i) for i in numeros]), PRIMER_PUERTO)
+    print("Multicast: IP " + str(ultima_ipmulticast) + " PUERTO: " + str(ultimo_puertomulticast))
+    return (ultima_ipmulticast, ultimo_puertomulticast)
+
+
+def iniciar_conexion(path, multicast_group):
+    soc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    ttl = struct.pack('b', 1)
+    soc.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+    stream(soc, multicast_group, path)
+
 
 def stream(sock, multicast_group, filename):
-    while 1:
-        video = cv2.VideoCapture()
+    while True:
+        video = cv2.VideoCapture(filename)
         while video.isOpened():
             success, image = video.read()
             if not success:
@@ -52,27 +59,24 @@ def stream(sock, multicast_group, filename):
             sock.sendto(jpeg.tobytes(), multicast_group)
             time.sleep(0.05)
 
-def connect(path, multicast_group):
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    ttl = struct.pack('b', 1)
-    s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
-    stream(s, multicast_group, path)
 
-def run(conn, addr):
-    global file_format, c_file
-    data = conn.recv(max_bytes)
-    path = source + file_format.replace('${}', str(c_file))
-    c_file += 1
-    file = open(path, 'wb')
+def ejecucion(conn, addr):
+    global formato_nombre_archivo, nombre_archivo_actual
+    data = conn.recv(CANT_MAX_BYTES)
+    path = RUTA_VIDEO + formato_nombre_archivo.replace('${}', str(nombre_archivo_actual))
+    print(str(path))
+    nombre_archivo_actual += 1
+    a = open(path, 'wb')
     while data:
-        file.write(data)
-        data = conn.recv(max_bytes)
+        a.write(data)
+        data = conn.recv(CANT_MAX_BYTES)
     conn.close()
-    connect(path, new_group())
+    iniciar_conexion(path, nuevo_grupo_mc())
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind(host, port)
-s.listen()
-while 1:
-    conn, addr = s.accept()
-    threading.Thread(target=run, args = (conn, addr)).start()
+
+tcp_soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+tcp_soc.bind((IP_HOST, PUERTO))
+tcp_soc.listen()
+while True:
+    conn, addr = tcp_soc.accept()
+    threading.Thread(target=ejecucion, args=(conn, addr)).start()

@@ -1,0 +1,12 @@
+Fecha: 2020-10-23 23:02:07.607888
+----------------------------------------
+Nombre del archivo Recibido
+Tamanio del archivo: 116396387 bytes
+Cliente 0 termino con estado de Error
+Numero de paquetes recibidos por el cliente:28419
+
+HASH calculado en el servidor: 
+1baa2a26d235a1f5055c0a8972e04f8ddd3afba0
+HASH calculado en el cliente: 
+70887e4e3de0b526d76386db92ad3b3b15ae2d7c
+---------------------------------------

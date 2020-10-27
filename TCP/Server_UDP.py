@@ -1,110 +1,185 @@
 import socket
+import hashlib
 import threading
 import time
-import hashlib
+import datetime
+import os
 
 lock = threading.Lock()
 
-fileName = ""
-fileExt = ""
-print("1 - ROSES (100MB)")
-print("2 - A7X (250MB)")
-f_num = int(input("Seleccione el archivo:"))
-if f_num == 1:
-    fileName = "../media/roses.pdf"
-    fileExt = ".pdf"
-elif f_num == 2:
-    fileName = "../media/a7x.mp4"
-    fileExt = ".mp4"
-n_clients = int(input("Introduzca el # de clientes a enviar el archivo"))
-c_clients = 0
-attend = False
 
-host = "127.0.0.1"
-buffer = 1024
+def pedirDatos():
+    fileName = ""
+    fileT = ""
+    entr = int(input("Ingrese archivo que quiere enviar 1 (100 MB) o 2 (250MB)"))
+    if (entr == 1):
+        fileName = "../media/roses.pdf"
+        fileT = ".pdf"
+    elif (entr == 2):
+        fileName = "../media/a7x.mp4.mp4"
+        fileT = ".mp4"
+    entr = int(input("Ingrese el numero de clientes en simultaneo a enviar el archivo"))
+    numClientes = entr
+    return fileName, fileT, numClientes
 
-def server(p, dir):
-    global n_clients, c_clients, attend
-    port = 20001 + p
+
+tup = pedirDatos()
+fileName = tup[0]
+numClientes = tup[2]
+fileT = tup[1]
+numClientesC = 0
+atender = False
+
+
+def createLog():
+    print("Creando log")
+
+    # Fecha y hora --creacion log
+    fecha = datetime.datetime.now()
+
+    logName = "Logs/UDPLog" + str(fecha.timestamp()) + ".txt"
+    logFile = open(logName, "a")
+    logFile.write("Fecha: " + str(fecha) + "\n")
+
+    # Nombre del archivo y tamanio
+    fileN = fileName.split("/")
+    fileN = fileN[2]
+
+    logFile.write("Nombre del archivo: " + fileN + "\n")
+
+    fSize = os.path.getsize(fileName)
+
+    logFile.write("Tamanio del archivo: " + str(fSize) + " bytes\n")
+    logFile.write("----------------------------------------\n")
+
+    logFile.close()
+    return logName
+
+
+# Crear el archivo de log
+logName = createLog()
+
+
+def logDatosCliente(recepcion, tiempo, numPaqEnv, numPaqRecv, hashR, hash):
+    with lock:
+        paquetesE = "Numero de paquetes enviados por el servidor:" + str(numPaqEnv) + "\n"
+        paquetesR = "Numero de paquetes recibidos por el cliente:" + str(numPaqRecv) + "\n"
+        tiempoT = "Tiempo: " + str(tiempo) + " segundos\n"
+        separador = "\n---------------------------------------\n"
+        hash = "\nHASH calculado en el servidor: \n" + hash
+        logFile = open(logName, "a")
+        logFile.write(recepcion + "\n" + paquetesE + paquetesR + tiempoT + hashR + hash + separador)
+        logFile.close()
+
+
+host = ""
+BUFF = 4096
+
+def servidor(port1,dir):
+    global numClientesC
+    global atender
+    port=20001+port1
+    # TCP ------> socket.AF_INET, socket.SOCK_STREAM
+    # UDP ------> socket.AF_INET, socket.SOCK_DGRAM
     s = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
-    s.bind((host,port))
-    s.sendto(str(port).encode(), dir)
-    print("Listening at:", port)
+    # Bind to address and ip
+    s.bind((host, port))
+    s.sendto(str(port).encode(),dir)
+    print("UDP server up and listening at port ",port)
 
-    while 1:
-        data = s.recvfrom(buffer)
-        msg = data[0]
+    while True:
+        data = s.recvfrom(BUFF)
+        mess = data[0]
         dir = data[1]
 
-        if (msg.decode() == "READY"):
-            c_clients += 1
-            print("Clientes conectados:", c_clients)
-            sha1 = hashlib.sha1()
-            while 1:
-                if c_clients >= n_clients or attend:
-                    print("Comenzando a enviar")
-                    break
-            attend = True
+        print('Server received', mess.decode())
 
-            s.sendto(fileExt.encode(), dir)
+        if (mess.decode() == "READY"):
+            numClientesC += 1
+            print("Numero Clientes Conectados: ", numClientesC)
+            sha1 = hashlib.sha1()
+            while True:
+                if (numClientesC >= numClientes or atender):
+                    print("Starting to send")
+                    break
+            atender = True
+            i = 0
+
+            s.sendto(fileT.encode(), dir)
+
             time.sleep(0.01)
 
-            start = time.time()
+            inicioT = time.time()
             f = open(fileName, 'rb')
-            i = 0
-            while 1:
+            while True:
                 i += 1
-                data = f.read(buffer)
+                data = f.read(BUFF)
                 if not data:
                     break
                 sha1.update(data)
-                s.sendto(data, dir)
-            print("Archivo enviado")
+                s.sendto(data,dir)
+            print("Archivo Enviado")
 
-            h = str(sha1.hexdigest())
-            s.sendto(("FINM" + h).encode(), dir)
+            # Envio de Hash
+            has = str(sha1.hexdigest())
+            s.sendto(("FINM" + has).encode(),dir)
             f.close()
 
-            data = s.recvfrom(buffer)
-            clientData = data[0].decode().split("/")
-            reception = clientData[1]
 
-            end = float(clientData[2])
-            total_time = end - start
+            data = s.recvfrom(BUFF)
+            # Notificacion de recepcion
+            datosCiente = data[0].decode().split("/")
+            recepcion = datosCiente[1]
+            print(recepcion)
 
-            recieved = clientData[0]
-            hashR = clientData[4]
-            #logData(reception, total_time, i, recieved, hashR, h)
+            # Notificacion de tiempo
+            finT = float(datosCiente[2])
+            totalT = finT - inicioT
+            # print("Tiempo total:",totalT, "Segundos")
 
-            print("Fin del envío")
-            c_clients -= 1
-            print("Clientes conectados:", c_clients)
+            # Numero de paquetes recibidos por el cliente
+            paqRecv = datosCiente[0]
 
-            cli_end = clientData[3]
-            if cli_end == "TERMINATE":
-                print(cli_end)
+            hashR = datosCiente[4]
+            logDatosCliente(recepcion, totalT, i, paqRecv, hashR, has)
+
+            print('Fin envio')
+            numClientesC -= 1
+            print("Numero Clientes Conectados: ", numClientesC)
+
+            # Notificacion de fin de cliente o no
+            terminS = datosCiente[3]
+            # print("Mensaje del cliente: ", terminS)
+
+            if (terminS == "TERMINATE"):
+                print(terminS)
                 s.close()
-                print("Fin del servidor")
+                print("Fin Servidor en puerto ",port)
                 break
 
-p = 20001
+
+
+port1=20001
+# TCP ------> socket.AF_INET, socket.SOCK_STREAM
+# UDP ------> socket.AF_INET, socket.SOCK_DGRAM
 s = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
-s.bind((host, p))
-i = 1
-while 1:
-    data = s.recvfrom(buffer)
-    msg = data[0]
+# Bind to address and ip
+s.bind((host, port1))
+i=1
+while True:
+    data = s.recvfrom(BUFF)
+    mess = data[0]
     dir = data[1]
 
-    if msg.decode() == "REQUEST":
-        if i == 26:
-            i = 1
-        t = threading.Thread(target=server, args=(i, dir))
+    if (mess.decode() == "REQUEST"):
+        if(i==26):
+            i=1
+        t = threading.Thread(target=servidor, args=(i,dir))
         i += 1
         t.start()
 
-    if msg.decode() == "END":
-        print("Fin de las conexiones")
+    if (mess.decode() == "END"):
+        print("FIN CONEXIONES")
         break
